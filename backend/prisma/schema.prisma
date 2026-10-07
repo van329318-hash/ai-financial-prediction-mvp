@@ -1,0 +1,128 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  username      String    @unique
+  email         String    @unique
+  passwordHash  String
+  walletBalance Decimal   @default(1000.00)
+  totalBets     Decimal   @default(0.00)
+  totalWinnings Decimal   @default(0.00)
+  winRate       Float     @default(0)
+  isActive      Boolean   @default(true)
+  isAdmin       Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  bets                 Bet[]
+  walletTransactions   WalletTransaction[]
+  auditLogs            AuditLog[]
+
+  @@index([username])
+  @@index([email])
+}
+
+model GameRound {
+  id                     String        @id @default(cuid())
+  roundNumber            BigInt        @unique
+  status                 String        @default("pending")
+  predictionTaiProb      Float         @default(50)
+  predictionXiuProb      Float         @default(50)
+  aiConfidence           Float         @default(50)
+  actualResult           String?
+  predictionResult       String?
+  isAiCorrect            Boolean?
+  totalBetsTai           Decimal       @default(0.00)
+  totalBetsXiu           Decimal       @default(0.00)
+  totalAmountWagered     Decimal       @default(0.00)
+  patternType            String?
+  indicators             Json?
+  houseProfit            Decimal       @default(0.00)
+  createdAt              DateTime      @default(now())
+  startedAt              DateTime?
+  closedAt               DateTime?
+  resultAnnouncedAt      DateTime?
+
+  bets        Bet[]
+  aiSignals   AISignal[]
+
+  @@index([status])
+  @@index([roundNumber])
+}
+
+model Bet {
+  id          String        @id @default(cuid())
+  userId      String
+  roundId     String
+  betType     String
+  amount      Decimal
+  odds        Float         @default(1.97)
+  status      String        @default("pending")
+  payout      Decimal?
+  profit      Decimal?
+  createdAt   DateTime      @default(now())
+  settledAt   DateTime?
+
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  round       GameRound     @relation(fields: [roundId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([roundId])
+  @@index([status])
+}
+
+model AISignal {
+  id                    String        @id @default(cuid())
+  roundId               String
+  prediction            String
+  confidence            Float
+  patternType           String?
+  technicalIndicators   Json?
+  modelVersion          String
+  processingTimeMs      Int
+  createdAt             DateTime      @default(now())
+
+  round                 GameRound     @relation(fields: [roundId], references: [id], onDelete: Cascade)
+
+  @@index([roundId])
+}
+
+model WalletTransaction {
+  id              String        @id @default(cuid())
+  userId          String
+  betId           String?
+  transactionType String
+  amount          Decimal
+  balanceBefore   Decimal?
+  balanceAfter    Decimal?
+  status          String        @default("completed")
+  description     String?
+  createdAt       DateTime      @default(now())
+
+  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model AuditLog {
+  id          String        @id @default(cuid())
+  userId      String?
+  action      String
+  details     Json?
+  ipAddress   String?
+  createdAt   DateTime      @default(now())
+
+  user        User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+}

@@ -1,0 +1,69 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: betting_game_db
+    environment:
+      POSTGRES_USER: betting_user
+      POSTGRES_PASSWORD: betting_password
+      POSTGRES_DB: betting_game
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - betting_network
+
+  redis:
+    image: redis:7-alpine
+    container_name: betting_game_cache
+    ports:
+      - "6379:6379"
+    networks:
+      - betting_network
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: betting_game_backend
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: postgresql://betting_user:betting_password@postgres:5432/betting_game
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: your_jwt_secret_key_here
+      AI_ENGINE_URL: http://ai-engine:5000
+      PORT: 3001
+    ports:
+      - "3001:3001"
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - betting_network
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+
+  ai-engine:
+    build:
+      context: ./ai-engine
+      dockerfile: Dockerfile
+    container_name: betting_game_ai
+    environment:
+      FLASK_ENV: development
+      MODEL_VERSION: v1.0
+    ports:
+      - "5000:5000"
+    networks:
+      - betting_network
+    volumes:
+      - ./ai-engine:/app
+
+volumes:
+  postgres_data:
+
+networks:
+  betting_network:
+    driver: bridge
