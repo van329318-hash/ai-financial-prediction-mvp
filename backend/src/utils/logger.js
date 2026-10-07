@@ -1,22 +1,26 @@
-const winston = require('winston');
-
-const logger = winston.createLogger({
+const logger = require('winston').createLogger({
   level: process.env.LOG_LEVEL || 'info',
-  format: winston.format.combine(
-    winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
-    winston.format.errors({ stack: true }),
-    winston.format.printf(({ timestamp, level, message, ...meta }) => {
+  format: require('winston').format.combine(
+    require('winston').format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
+    require('winston').format.errors({ stack: true }),
+    require('winston').format.colorize(),
+    require('winston').format.printf(({ timestamp, level, message, ...meta }) => {
       let metaStr = '';
-      if (Object.keys(meta).length > 0) {
-        metaStr = JSON.stringify(meta);
+      if (Object.keys(meta).length > 0 && meta.stack === undefined) {
+        metaStr = ' ' + JSON.stringify(meta);
       }
-      return `${timestamp} [${level.toUpperCase()}]: ${message} ${metaStr}`;
+      return `${timestamp} [${level}] ${message}${metaStr}`;
     })
   ),
   transports: [
-    new winston.transports.Console(),
-    new winston.transports.File({ filename: 'logs/error.log', level: 'error' }),
-    new winston.transports.File({ filename: 'logs/combined.log' })
+    new (require('winston').transports.Console)(),
+    new (require('winston').transports.File)({
+      filename: 'logs/error.log',
+      level: 'error'
+    }),
+    new (require('winston').transports.File)({
+      filename: 'logs/combined.log'
+    })
   ]
 });
 
